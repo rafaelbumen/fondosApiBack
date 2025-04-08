@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import java.util.List;
 import java.util.Optional;
@@ -24,9 +25,10 @@ public class UserController {
 
     private final JwtUtil jwtUtil;
 
-    public UserController(UserService userService) {
+    @Autowired
+    public UserController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
-        this.jwtUtil = new JwtUtil();
+        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping
