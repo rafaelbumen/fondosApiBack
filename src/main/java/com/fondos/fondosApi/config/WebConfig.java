@@ -12,7 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // Permite CORS para todas las rutas
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173") // Permite solicitudes solo desde este origen
+                .allowedOrigins("http://frontend-fondos-alb-41541643.us-east-1.elb.amazonaws.com") // Permite solicitudes solo desde este origen
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
