@@ -27,15 +27,18 @@ public class UserService {
 
     public User createUser(UserRequest request) {
 
+        String formattedPhoneNumber = formatPhoneNumber(request.getTelefono());
+
         if (repository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("El correo ya está registrado");
         }
+
         User user = new User();
         user.setId(UUID.randomUUID().toString());
         user.setNombre(request.getNombre());
         user.setApellidos(request.getApellidos());
         user.setEmail(request.getEmail());
-        user.setTelefono(request.getTelefono());
+        user.setTelefono(formattedPhoneNumber);
         user.setNotificationMethod(request.getNotificationMethod());
         user.setBalance(500000L);
         user.setTransactions(new ArrayList<>());
@@ -62,5 +65,21 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return repository.findByEmail(email);
+    }
+
+
+    
+    private String formatPhoneNumber(String phoneNumber) {
+
+        phoneNumber = phoneNumber.replaceAll("[^0-9]", "");
+
+        if (phoneNumber.startsWith("57")) {
+            return "+" + phoneNumber;  
+        } else if (phoneNumber.length() == 10) {
+
+            return "+57" + phoneNumber;
+        } else {
+            throw new IllegalArgumentException("El número de teléfono no es válido para Colombia");
+        }
     }
 }
