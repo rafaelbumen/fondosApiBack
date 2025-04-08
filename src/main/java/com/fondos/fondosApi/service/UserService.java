@@ -18,9 +18,11 @@ public class UserService {
 
     private final IUserRepository repository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final SNSService snsService; // 
 
-    public UserService(IUserRepository repository) {
+    public UserService(IUserRepository repository, SNSService snsService) {
         this.repository = repository;
+        this.snsService = snsService;
     }
 
     public User createUser(UserRequest request) {
@@ -38,6 +40,8 @@ public class UserService {
         user.setBalance(500000L);
         user.setTransactions(new ArrayList<>());
         user.setPassword(passwordEncoder.encode(request.getPassword())); // 👈 aquí se encripta
+
+        snsService.subscribeUser(user.getEmail(), user.getTelefono(), user.getNotificationMethod());
 
         return repository.save(user);
     }

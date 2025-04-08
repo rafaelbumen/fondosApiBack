@@ -19,27 +19,29 @@ public class SuscripcionService {
 
     private final IUserRepository userRepository;
     private final IFondoRepository fondoRepository;
+    private final SNSService snsService; //
 
-    public SuscripcionService(IUserRepository userRepository, IFondoRepository fondoRepository) {
+    public SuscripcionService(IUserRepository userRepository, IFondoRepository fondoRepository, SNSService snsService) {
         this.userRepository = userRepository;
         this.fondoRepository = fondoRepository;
+        this.snsService = snsService;
     }
 
     public void subscribe(SuscripcionRequest request) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
-    
+
         Fondo fondo = fondoRepository.findById(request.getFondoId())
                 .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
-    
+
         if (request.getMonto() < fondo.getMontoMinimo()) {
             throw new IllegalArgumentException("Monto inferior al mínimo del fondo");
         }
-    
+
         Optional<Suscripcion> suscripcionExistente = user.getSuscripciones().stream()
                 .filter(s -> s.getFondoId().equals(request.getFondoId()))
                 .findFirst();
-    
+
         String tipoTransaccion;
         if (suscripcionExistente.isPresent()) {
             // Ya existe, sumar al monto actual
@@ -59,7 +61,7 @@ public class SuscripcionService {
             user.getSuscripciones().add(nueva);
             tipoTransaccion = "suscripcion";
         }
-    
+
         // Registrar transacción
         Transaction trans = new Transaction();
         trans.setId(UUID.randomUUID().toString());
@@ -71,58 +73,68 @@ public class SuscripcionService {
                 : "Aporte adicional al fondo " + fondo.getNombre());
         trans.setMonto(request.getMonto());
         trans.setFecha(LocalDateTime.now());
-    
+
         user.getTransactions().add(trans);
-    
+
         // Descontar balance del usuario
         if (user.getBalance() < request.getMonto()) {
             throw new IllegalArgumentException("El usuario no tiene suficiente saldo");
         }
         user.setBalance(user.getBalance() - request.getMonto());
-    
+
         // Sumar al total del fondo
         fondo.setTotalAportes(fondo.getTotalAportes() + request.getMonto());
-    
+
         // Guardar cambios
         fondoRepository.save(fondo);
         userRepository.save(user);
+
+        // Enviar notificación de suscripción o aporte
+        if ("suscripcion".equals(tipoTransaccion)) {
+            snsService.sendNotification(
+                    "¡Te has suscrito al fondo " + fondo.getNombre() + " con un monto de " + request.getMonto() + "!");
+        } else {
+            snsService.sendNotification(
+                    "¡Has hecho un aporte adicional al fondo " + fondo.getNombre() + " de " + request.getMonto() + "!");
+        }
     }
-    
 
     public void desvincularDeFondo(DesvinculacionRequest request) {
-    User user = userRepository.findById(request.getUserId())
-            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-    Suscripcion suscripcion = user.getSuscripciones().stream()
-            .filter(s -> s.getFondoId().equals(request.getFondoId()))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("El usuario no está suscrito a este fondo"));
+        Suscripcion suscripcion = user.getSuscripciones().stream()
+                .filter(s -> s.getFondoId().equals(request.getFondoId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("El usuario no está suscrito a este fondo"));
 
-    // Quitar la suscripción
-    user.getSuscripciones().remove(suscripcion);
+        // Quitar la suscripción
+        user.getSuscripciones().remove(suscripcion);
 
-    // Agregar transacción
-    Transaction transaccion = new Transaction();
-    transaccion.setId(UUID.randomUUID().toString());
-    transaccion.setTipo("cancelacion");
-    transaccion.setFondoId(request.getFondoId());
-    transaccion.setFondoNombre(suscripcion.getFondoNombre());
-    transaccion.setDescripcion("Cancelación del fondo " + suscripcion.getFondoNombre());
-    transaccion.setMonto(suscripcion.getMonto());
-    transaccion.setFecha(LocalDateTime.now());
-    user.getTransactions().add(transaccion);
+        // Agregar transacción
+        Transaction transaccion = new Transaction();
+        transaccion.setId(UUID.randomUUID().toString());
+        transaccion.setTipo("cancelacion");
+        transaccion.setFondoId(request.getFondoId());
+        transaccion.setFondoNombre(suscripcion.getFondoNombre());
+        transaccion.setDescripcion("Cancelación del fondo " + suscripcion.getFondoNombre());
+        transaccion.setMonto(suscripcion.getMonto());
+        transaccion.setFecha(LocalDateTime.now());
+        user.getTransactions().add(transaccion);
 
-    // Reembolsar el monto
-    user.setBalance(user.getBalance() + suscripcion.getMonto());
+        // Reembolsar el monto
+        user.setBalance(user.getBalance() + suscripcion.getMonto());
 
-    // Actualizar fondo
-    Fondo fondo = fondoRepository.findById(request.getFondoId())
-            .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
-    fondo.setTotalAportes(fondo.getTotalAportes() - suscripcion.getMonto());
+        // Actualizar fondo
+        Fondo fondo = fondoRepository.findById(request.getFondoId())
+                .orElseThrow(() -> new IllegalArgumentException("Fondo no encontrado"));
+        fondo.setTotalAportes(fondo.getTotalAportes() - suscripcion.getMonto());
 
-    fondoRepository.save(fondo);
-    userRepository.save(user);
+        fondoRepository.save(fondo);
+        userRepository.save(user);
+
+         // Enviar notificación de desvinculación
+         snsService.sendNotification("¡Te has desvinculado del fondo " + fondo.getNombre() + " y se ha reembolsado un monto de " + suscripcion.getMonto() + "!");
+    }
+
 }
-
-}
-
