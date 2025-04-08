@@ -20,12 +20,13 @@ class SuscripcionServiceTest {
     private UserRepository userRepository;
     private FondoRepository fondoRepository;
     private SuscripcionService suscripcionService;
+    private SNSService snsService;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
         fondoRepository = mock(FondoRepository.class);
-        suscripcionService = new SuscripcionService(userRepository, fondoRepository);
+        suscripcionService = new SuscripcionService(userRepository, fondoRepository, snsService);
     }
 
     @Test

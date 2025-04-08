@@ -18,11 +18,13 @@ class UserServiceTest {
 
     private IUserRepository userRepository;
     private UserService userService;
+    private SNSService snsService;
+    
 
     @BeforeEach
     void setUp() {
         userRepository = mock(IUserRepository.class);
-        userService = new UserService(userRepository);
+        userService = new UserService(userRepository, snsService);
     }
 
     @Test
