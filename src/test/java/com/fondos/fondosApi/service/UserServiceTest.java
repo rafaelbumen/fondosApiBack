@@ -19,12 +19,13 @@ class UserServiceTest {
     private IUserRepository userRepository;
     private UserService userService;
     private SNSService snsService;
-    
 
     @BeforeEach
     void setUp() {
+        // Mock de las dependencias
         userRepository = mock(IUserRepository.class);
-        userService = new UserService(userRepository, snsService);
+        snsService = mock(SNSService.class);  // Mock de SNSService
+        userService = new UserService(userRepository, snsService);  // Se pasa snsService al constructor
     }
 
     @Test
@@ -89,5 +90,8 @@ class UserServiceTest {
         assertEquals(500000L, result.getBalance());
         assertTrue(result.getTransactions().isEmpty());
         verify(userRepository).save(any(User.class));
+
+        // Verificar que snsService haya sido llamado con los parámetros correctos
+        verify(snsService).subscribeUser(eq(result.getEmail()), eq(result.getTelefono()), eq("email"));
     }
 }
